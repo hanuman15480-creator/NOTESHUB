@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify web files
+      - name: Verify website
         run: |
           test -f www/index.html
           test -f www/admin.html
@@ -36,27 +36,28 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-36
-            build-tools;36.0.0
+      - name: Prepare Android SDK
+        run: |
+          echo "Android SDK: $ANDROID_HOME"
+          sdkmanager --version
+          yes | sdkmanager --licenses
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Debug APK
+      - name: Build NotesHub APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload NotesHub APK
         uses: actions/upload-artifact@v4
         with:
           name: NotesHub-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
