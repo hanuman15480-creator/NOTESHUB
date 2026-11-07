@@ -36,12 +36,20 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Prepare Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        shell: bash
         run: |
-          echo "Android SDK: $ANDROID_HOME"
-          sdkmanager --version
-          yes | sdkmanager --licenses
-          sdkmanager --install \
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "sdkmanager not found"
+            find "$ANDROID_HOME/cmdline-tools" -name sdkmanager
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install \
             "platform-tools" \
             "platforms;android-36" \
             "build-tools;36.0.0"
@@ -49,13 +57,13 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build NotesHub APK
+      - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload NotesHub APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: NotesHub-Android-APK
