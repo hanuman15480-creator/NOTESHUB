@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101d40">
+<link rel="manifest" href="/manifest.json">
+<title>NotesHub | Study Smarter</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#f5f7fc;color:#172554;
+ font-family:Arial,sans-serif
+}
+header{
+ background:#101d40;color:white;padding:25px 20px;
+ border-radius:0 0 24px 24px
+}
+nav{display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:25px;font-weight:bold}
+.hero{padding:30px 0 15px}
+.hero h1{font-size:30px;margin-bottom:8px}
+.hero p{color:#cbd5e1}
+main{max-width:900px;margin:auto;padding:20px}
+.search{
+ width:100%;padding:16px;border:1px solid #dbe2ef;
+ border-radius:12px;font-size:16px;margin:15px 0
+}
+h2{font-size:21px}
+.subjects{
+ display:grid;grid-template-columns:repeat(3,1fr);gap:10px
+}
+.subject{
+ background:white;border:1px solid #e2e8f0;
+ padding:17px 5px;border-radius:14px;text-align:center;
+ font-weight:bold;cursor:pointer
+}
+.subject.active{background:#dbeafe;border-color:#2563eb}
+.card{
+ background:white;padding:18px;border-radius:16px;
+ margin:13px 0;box-shadow:0 3px 12px #1725540b
+}
+.card h3{margin:5px 0}
+.muted{color:#64748b;font-size:14px}
+.price{color:#15803d;font-weight:bold;font-size:19px}
+button{
+ border:0;padding:12px 15px;border-radius:9px;
+ background:#2563eb;color:white;font-weight:bold;
+ cursor:pointer
+}
+.preview{color:#2563eb;text-decoration:none;font-weight:bold}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cart{
+ background:#eaf1ff;padding:18px;border-radius:16px;
+ margin-top:25px
+}
+footer{text-align:center;padding:30px;color:#64748b}
+@media(max-width:450px){
+ .subjects{grid-template-columns:repeat(3,1fr)}
+ .hero h1{font-size:25px}
+}
+</style>
+</head>
+
+<body>
+<header>
+<nav>
+<div class="logo">📚 NotesHub</div>
+<div>Class 12 CBSE</div>
+</nav>
+<div class="hero">
+<h1>Your Study. Your Success.</h1>
+<p>Organised handwritten notes for smarter learning.</p>
+</div>
+</header>
+
+<main>
+<h2>Find Your Notes</h2>
+<input id="search" class="search"
+placeholder="Search chapters or subjects...">
+
+<h2>Explore Subjects</h2>
+<div class="subjects">
+<div class="subject active" data-subject="All">📚<br>All</div>
+<div class="subject" data-subject="Physics">⚡<br>Physics</div>
+<div class="subject" data-subject="Chemistry">🧪<br>Chemistry</div>
+<div class="subject" data-subject="Maths">📐<br>Maths</div>
+</div>
+
+<h2>Available Notes</h2>
+<p class="muted" id="count">Loading notes...</p>
+<div id="catalogue"></div>
+
+<section class="cart">
+<h2>🛒 Your Cart</h2>
+<div id="cartItems">Your cart is empty.</div>
+<h3 id="total">Total: ₹0</h3>
+<div class="actions">
+<button onclick="clearCart()">Clear Cart</button>
+<button onclick="checkout()">Order Summary</button>
+</div>
+<p id="message" class="muted"></p>
+</section>
+</main>
+
+<footer>© 2026 NotesHub | Learn Better, Grow Better</footer>
+
+<script>
+let products=[];
+let selectedSubject="All";
+let cart=[];
+
+try{
+ const saved=JSON.parse(localStorage.getItem("notesCart")||"[]");
+ if(Array.isArray(saved)) cart=saved;
+}catch{}
+
+async function loadProducts(){
+ try{
+  const response=await fetch("/api/notes");
+  if(!response.ok) throw Error();
+  const data=await response.json();
+  if(!Array.isArray(data)) throw Error();
+  products=data;
+  renderProducts();
+ }catch{
+  document.getElementById("catalogue").textContent=
+  "Unable to load notes. Please refresh.";
+ }
+}
+
+function renderProducts(){
+ const query=document.getElementById("search").value.toLowerCase();
+ const list=products.filter(p=>
+  (selectedSubject==="All"||p.subject===selectedSubject)&&
+  (p.chapter+" "+p.subject).toLowerCase().includes(query)
+ );
+ const box=document.getElementById("catalogue");
+ box.replaceChildren();
+ document.getElementById("count").textContent=
+ list.length+" notes available";
+
+ if(!list.length){
+  box.textContent="No notes found.";
+  return;
+ }
+
+ list.forEach(p=>{
+  const card=document.createElement("div");
+  card.className="card";
+
+  const title=document.createElement("h3");
+  title.textContent=p.chapter;
+
+  const subject=document.createElement("p");
+  subject.className="muted";
+  subject.textContent=p.subject+" • Class 12 CBSE";
+
+  const price=document.createElement("p");
+  price.className="price";
+  price.textContent="₹"+Number(p.price);
+
+  const preview=document.createElement("a");
+  preview.className="preview";
+  preview.href=p.pdfUrl;
+  preview.target="_blank";
+  preview.rel="noopener";
+  preview.textContent="Preview PDF";
+
+  const add=document.createElement("button");
+  add.textContent="Add to Cart";
+  add.onclick=()=>addToCart(p.id);
+
+  const actions=document.createElement("div");
+  actions.className="actions";
+  actions.append(preview,add);
+  card.append(title,subject,price,actions);
+  box.append(card);
+ });
+}
+
+document.querySelectorAll(".subject").forEach(button=>{
+ button.onclick=()=>{
+  selectedSubject=button.dataset.subject;
+  document.querySelectorAll(".subject").forEach(x=>
+   x.classList.toggle("active",x===button)
+  );
+  renderProducts();
+ };
+});
+
+document.getElementById("search").oninput=renderProducts;
+
+function saveCart(){
+ localStorage.setItem("notesCart",JSON.stringify(cart));
+ renderCart();
+}
+
+function addToCart(id){
+ const p=products.find(x=>x.id===id);
+ if(!p)return;
+ if(cart.some(x=>x.id===id)){
+  alert("Already in cart");
+  return;
+ }
+ cart.push({
+  id:p.id,chapter:p.chapter,
+  subject:p.subject,price:Number(p.price)
+ });
+ saveCart();
+}
+
+function renderCart(){
+ const box=document.getElementById("cartItems");
+ box.replaceChildren();
+
+ cart.forEach((item,index)=>{
+  const row=document.createElement("p");
+  row.textContent=item.chapter+" — ₹"+item.price+" ";
+
+  const remove=document.createElement("button");
+  remove.textContent="Remove";
+  remove.onclick=()=>{
+   cart.splice(index,1);
+   saveCart();
+  };
+  row.append(remove);
+  box.append(row);
+ });
+
+ const total=cart.reduce((s,p)=>s+p.price,0);
+ document.getElementById("total").textContent="Total: ₹"+total;
+ if(!cart.length)box.textContent="Your cart is empty.";
+}
+
+function clearCart(){
+ cart=[];
+ saveCart();
+ document.getElementById("message").textContent="";
+}
+
+function checkout(){
+ const message=document.getElementById("message");
+ if(!cart.length){
+  message.textContent="Your cart is empty.";
+  return;
+ }
+ const total=cart.reduce((s,p)=>s+p.price,0);
+ message.textContent=
+ "Order preview: "+cart.length+
+ " item(s). Total ₹"+total+
+ ". Online ordering is not enabled yet.";
+}
+
+renderCart();
+loadProducts();
+</script>
+</body>
+</html>

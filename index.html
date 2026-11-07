@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101d40">
+<title>NotesHub | Class 12 CBSE Notes</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f4f6fb;
+  color:#17213b;
+}
+header{
+  background:#101d40;
+  color:white;
+  padding:22px 16px;
+}
+.header{
+  max-width:1050px;
+  margin:auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  flex-wrap:wrap;
+}
+.logo{font-size:26px;font-weight:bold}
+header a{
+  color:white;
+  text-decoration:none;
+  background:#263b70;
+  padding:11px 15px;
+  border-radius:8px;
+}
+main{max-width:1050px;margin:25px auto;padding:0 15px}
+.hero{
+  background:white;
+  padding:25px;
+  border-radius:15px;
+  margin-bottom:20px;
+}
+.hero h1{margin-top:0}
+.controls{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:20px 0;
+}
+input,select,button{
+  padding:12px;
+  border:1px solid #d7dceb;
+  border-radius:8px;
+  font-size:15px;
+}
+input{flex:1;min-width:180px}
+button{
+  background:#18356f;
+  color:white;
+  border:0;
+  cursor:pointer;
+}
+button:hover{opacity:.9}
+.subjects button{margin:3px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:16px;
+}
+.card{
+  background:white;
+  border-radius:13px;
+  padding:18px;
+  box-shadow:0 3px 12px #0000000b;
+}
+.card h3{margin-top:0}
+.price{font-size:20px;font-weight:bold;color:#173b82}
+.muted{color:#68738a;font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.actions a{
+  color:#173b82;
+  text-decoration:none;
+  padding:10px 0;
+}
+.cart{
+  background:white;
+  padding:20px;
+  border-radius:13px;
+  margin-top:25px;
+}
+.cart-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid #eee;
+}
+footer{
+  text-align:center;
+  padding:25px;
+  color:#68738a;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="header">
+    <div class="logo">NotesHub</div>
+    <a href="/student.html">Student Login / My Orders</a>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <h1>Class 12 CBSE Notes</h1>
+  <p>Neat, organised handwritten notes to support your studies.</p>
+  <p class="muted">Physics | Chemistry | Mathematics</p>
+</section>
+
+<div class="controls">
+  <input id="search" type="search" placeholder="Search subject or chapter...">
+</div>
+
+<div class="subjects">
+  <button onclick="setSubject('All')">All</button>
+  <button onclick="setSubject('Physics')">Physics</button>
+  <button onclick="setSubject('Chemistry')">Chemistry</button>
+  <button onclick="setSubject('Maths')">Maths</button>
+</div>
+
+<h2>Available Notes</h2>
+<div id="notes" class="grid">
+  <p>Loading notes...</p>
+</div>
+
+<section class="cart">
+  <h2>Your Cart</h2>
+  <div id="cartItems"></div>
+  <h3 id="total">Total: ₹0</h3>
+  <div class="actions">
+    <button onclick="checkout()">Place Order</button>
+    <button onclick="clearCart()">Clear Cart</button>
+  </div>
+  <p id="message" class="muted"></p>
+  <p class="muted">
+    Orders are currently requests only. Payment is not enabled.
+  </p>
+</section>
+
+</main>
+
+<footer>
+  NotesHub © 2026 | Class 12 CBSE Study Resources
+</footer>
+
+<script>
+let allNotes=[];
+let cart=JSON.parse(localStorage.getItem("notesCart")||"[]");
+let selectedSubject="All";
+
+function saveCart(){
+  localStorage.setItem("notesCart",JSON.stringify(cart));
+  renderCart();
+}
+
+function setSubject(subject){
+  selectedSubject=subject;
+  renderNotes();
+}
+
+async function loadNotes(){
+  const container=document.getElementById("notes");
+
+  try{
+    const response=await fetch("/api/notes");
+    if(!response.ok) throw new Error("Could not load notes.");
+
+    allNotes=await response.json();
+    renderNotes();
+  }catch(error){
+    container.innerHTML="<p>Unable to load notes. Please refresh.</p>";
+  }
+}
+
+function renderNotes(){
+  const container=document.getElementById("notes");
+  const search=document.getElementById("search").value.toLowerCase();
+
+  const filtered=allNotes.filter(note=>{
+    const subjectMatch=
+      selectedSubject==="All" ||
+      note.subject===selectedSubject;
+
+    const searchMatch=
+      (note.chapter||"").toLowerCase().includes(search) ||
+      (note.subject||"").toLowerCase().includes(search);
+
+    return subjectMatch && searchMatch;
+  });
+
+  if(!filtered.length){
+    container.innerHTML="<p>No notes found.</p>";
+    return;
+  }
+
+  container.innerHTML=filtered.map(note=>`
+    <div class="card">
+      <h3>${escapeHTML(note.chapter)}</h3>
+      <p class="muted">${escapeHTML(note.subject)}</p>
+      <p class="price">₹${Number(note.price).toFixed(2)}</p>
+      <div class="actions">
+        <a href="${safePdfUrl(note.pdfUrl)}" target="_blank" rel="noopener">Preview PDF</a>
+        <button onclick="addToCart('${encodeURIComponent(note.id)}')">
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function escapeHTML(value){
+  return String(value??"").replace(/[&<>"']/g,char=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  })[char]);
+}
+
+function safePdfUrl(value){
+  const url=String(value||"");
+  return url.startsWith("/uploads/") ? url : "#";
+}
+
+function addToCart(encodedId){
+  const id=decodeURIComponent(encodedId);
+  const note=allNotes.find(item=>String(item.id)===id);
+
+  if(!note) return;
+
+  if(cart.some(item=>String(item.id)===id)){
+    document.getElementById("message").textContent=
+      "This note is already in your cart.";
+    return;
+  }
+
+  cart.push({
+    id:note.id,
+    chapter:note.chapter,
+    subject:note.subject,
+    price:Number(note.price)
+  });
+
+  document.getElementById("message").textContent=
+    "Note added to cart.";
+
+  saveCart();
+}
+
+function removeFromCart(encodedId){
+  const id=decodeURIComponent(encodedId);
+  cart=cart.filter(item=>String(item.id)!==id);
+  saveCart();
+}
+
+function clearCart(){
+  cart=[];
+  saveCart();
+  document.getElementById("message").textContent="Cart cleared.";
+}
+
+function renderCart(){
+  const container=document.getElementById("cartItems");
+  const totalElement=document.getElementById("total");
+
+  if(!cart.length){
+    container.innerHTML='<p class="muted">Your cart is empty.</p>';
+    totalElement.textContent="Total: ₹0";
+    return;
+  }
+
+  container.innerHTML=cart.map(item=>`
+    <div class="cart-item">
+      <div>
+        <strong>${escapeHTML(item.chapter)}</strong>
+        <div class="muted">${escapeHTML(item.subject)}</div>
+        ₹${Number(item.price).toFixed(2)}
+      </div>
+      <button onclick="removeFromCart('${encodeURIComponent(item.id)}')">
+        Remove
+      </button>
+    </div>
+  `).join("");
+
+  const total=cart.reduce((sum,item)=>sum+Number(item.price),0);
+  totalElement.textContent="Total: ₹"+total.toFixed(2);
+}
+
+async function checkout(){
+  const message=document.getElementById("message");
+
+  if(!cart.length){
+    message.textContent="Your cart is empty.";
+    return;
+  }
+
+  try{
+    const response=await fetch("/api/orders",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        noteIds:cart.map(item=>item.id)
+      })
+    });
+
+    const data=await response.json();
+
+    if(response.status===401){
+      message.textContent="Please log in to place your order.";
+      window.location.href="/student.html";
+      return;
+    }
+
+    if(!response.ok){
+      throw new Error(data.error||"Order failed.");
+    }
+
+    cart=[];
+    saveCart();
+
+    message.textContent=
+      "Order placed! Order ID: "+
+      data.order.id.slice(0,8)+
+      ". Status: Pending. Payment: Unpaid.";
+
+  }catch(error){
+    message.textContent=error.message;
+  }
+}
+
+document.getElementById("search").addEventListener("input",renderNotes);
+
+renderCart();
+loadNotes();
+</script>
+
+</body>
+</html>

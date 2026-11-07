@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101d40">
+<title>NotesHub | Student Account</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#f3f6fc;color:#172554;
+ font-family:Arial,sans-serif
+}
+header{
+ background:#101d40;color:white;padding:22px;
+}
+header a{color:white;text-decoration:none}
+main{
+ max-width:480px;margin:35px auto;padding:20px
+}
+.panel{
+ background:white;padding:25px;border-radius:18px;
+ box-shadow:0 5px 25px #17255412
+}
+h1{font-size:25px}
+input{
+ width:100%;padding:14px;margin:9px 0;
+ border:1px solid #cbd5e1;border-radius:9px;
+ font-size:16px
+}
+button{
+ padding:13px;border:0;border-radius:9px;
+ background:#2563eb;color:white;font-weight:bold;
+ cursor:pointer
+}
+.primary{width:100%;margin-top:12px}
+.secondary{background:#e2e8f0;color:#172554}
+.tabs{display:flex;gap:10px;margin:18px 0}
+.tabs button{flex:1}
+.muted{color:#64748b;font-size:14px}
+#message{margin-top:15px}
+.order{
+ padding:15px;border:1px solid #e2e8f0;
+ border-radius:12px;margin:12px 0
+}
+.hidden{display:none}
+a{color:#2563eb}
+</style>
+</head>
+
+<body>
+
+<header>
+<a href="/"><strong>📚 NotesHub</strong></a>
+</header>
+
+<main>
+
+<section class="panel" id="authPanel">
+<h1>Student Account</h1>
+<p class="muted">Join NotesHub and manage your study orders.</p>
+
+<div class="tabs">
+<button id="loginTab">Login</button>
+<button id="registerTab" class="secondary">Register</button>
+</div>
+
+<form id="authForm">
+<input id="username"
+ placeholder="Username"
+ minlength="3" maxlength="24"
+ autocomplete="username" required>
+
+<input id="password"
+ type="password"
+ placeholder="Password"
+ minlength="10" maxlength="128"
+ autocomplete="current-password" required>
+
+<button class="primary" id="submitButton">
+Login
+</button>
+</form>
+
+<p id="message" class="muted" role="status"></p>
+</section>
+
+<section class="panel hidden" id="accountPanel">
+<h1>Welcome, <span id="studentName"></span>!</h1>
+<p class="muted">Your NotesHub account</p>
+
+<hr>
+
+<h2>My Orders</h2>
+<div id="orders">Loading orders...</div>
+
+<button id="logoutButton" class="primary">
+Logout
+</button>
+</section>
+
+</main>
+
+<script>
+let mode="login";
+
+const authPanel=document.getElementById("authPanel");
+const accountPanel=document.getElementById("accountPanel");
+const form=document.getElementById("authForm");
+const message=document.getElementById("message");
+
+function setMode(next){
+ mode=next;
+
+ document.getElementById("submitButton").textContent=
+ mode==="login"?"Login":"Create Account";
+
+ document.getElementById("loginTab").className=
+ mode==="login"?"":"secondary";
+
+ document.getElementById("registerTab").className=
+ mode==="register"?"":"secondary";
+
+ document.getElementById("password").autocomplete=
+ mode==="login"?"current-password":"new-password";
+
+ message.textContent="";
+}
+
+document.getElementById("loginTab").onclick=
+ ()=>setMode("login");
+
+document.getElementById("registerTab").onclick=
+ ()=>setMode("register");
+
+async function request(url,options={}){
+ const response=await fetch(url,{
+  ...options,
+  headers:{
+   "Content-Type":"application/json",
+   ...(options.headers||{})
+  }
+ });
+
+ const data=await response.json().catch(()=>({}));
+
+ if(!response.ok){
+  throw Error(data.error||"Something went wrong");
+ }
+
+ return data;
+}
+
+form.onsubmit=async event=>{
+ event.preventDefault();
+
+ const username=document.getElementById("username").value;
+ const password=document.getElementById("password").value;
+
+ message.textContent="Please wait...";
+
+ try{
+  if(mode==="register"){
+   await request("/api/student/register",{
+    method:"POST",
+    body:JSON.stringify({username,password})
+   });
+
+   setMode("login");
+   message.textContent=
+    "Account created! Please log in.";
+   form.reset();
+   return;
+  }
+
+  await request("/api/student/login",{
+   method:"POST",
+   body:JSON.stringify({username,password})
+  });
+
+  form.reset();
+  await showAccount();
+
+ }catch(error){
+  message.textContent=error.message;
+ }
+};
+
+async function showAccount(){
+ try{
+  const data=await request("/api/student/me");
+
+  authPanel.classList.add("hidden");
+  accountPanel.classList.remove("hidden");
+
+  document.getElementById("studentName").textContent=
+   data.user.username;
+
+  await loadOrders();
+
+ }catch{
+  accountPanel.classList.add("hidden");
+  authPanel.classList.remove("hidden");
+ }
+}
+
+async function loadOrders(){
+ const container=document.getElementById("orders");
+
+ try{
+  const orders=await request("/api/orders");
+  container.replaceChildren();
+
+  if(!orders.length){
+   container.textContent="No orders yet.";
+   return;
+  }
+
+  orders.forEach(order=>{
+   const card=document.createElement("div");
+   card.className="order";
+
+   const heading=document.createElement("strong");
+   heading.textContent="Order #"+order.id.slice(0,8);
+
+   const details=document.createElement("p");
+   details.className="muted";
+   details.textContent=
+    order.items.map(item=>item.chapter).join(", ");
+
+   const status=document.createElement("p");
+   status.textContent=
+    "Status: "+order.status+
+    " | Payment: "+order.paymentStatus;
+
+   const total=document.createElement("strong");
+   total.textContent="Total: ₹"+order.total;
+
+   card.append(heading,details,status,total);
+   container.append(card);
+  });
+
+ }catch{
+  container.textContent="Unable to load orders.";
+ }
+}
+
+document.getElementById("logoutButton").onclick=async()=>{
+ try{
+  await request("/api/student/logout",{method:"POST"});
+  accountPanel.classList.add("hidden");
+  authPanel.classList.remove("hidden");
+  message.textContent="Logged out successfully.";
+ }catch(error){
+  alert(error.message);
+ }
+};
+
+showAccount();
+</script>
+
+</body>
+</html>

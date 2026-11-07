@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#172554">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NotesHub Store</title>
+<style>
+* { box-sizing:border-box }
+body {
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f4f6fb;
+  color:#172554;
+}
+header {
+  background:#172554;
+  color:white;
+  padding:22px;
+}
+main {
+  max-width:700px;
+  margin:auto;
+  padding:18px;
+}
+input {
+  width:100%;
+  padding:14px;
+  border:1px solid #ccd3e1;
+  border-radius:10px;
+  margin:10px 0;
+}
+button {
+  padding:11px 15px;
+  border:0;
+  border-radius:8px;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+  margin:4px;
+}
+.card,.cart {
+  background:white;
+  padding:17px;
+  border-radius:13px;
+  margin:13px 0;
+}
+.muted { color:#64748b }
+.price { font-weight:bold;color:#15803d }
+#cartItems { padding:5px }
+footer {
+  text-align:center;
+  padding:25px;
+  color:#64748b;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 NotesHub</h1>
+  <p>Your Study. Your Success.</p>
+</header>
+
+<main>
+
+<section>
+<h2>Study smarter. Score better.</h2>
+<p>Class 12 CBSE handwritten notes.</p>
+<input id="search" placeholder="Search chapters...">
+</section>
+
+<section>
+<h2>Our Notes</h2>
+<div id="catalogue">Loading...</div>
+</section>
+
+<section class="cart">
+<h2>🛒 Your Shopping Cart</h2>
+<div id="cartItems"></div>
+<h3 id="total">Total: ₹0</h3>
+<button onclick="clearCart()">Clear Cart</button>
+<button onclick="checkout()">View Order Summary</button>
+<p id="checkoutMessage" class="muted"></p>
+</section>
+
+</main>
+
+<footer>© 2026 NotesHub</footer>
+
+<script>
+let products = [];
+let cart = JSON.parse(localStorage.getItem("notesCart") || "[]");
+
+async function loadProducts() {
+  try {
+    const response = await fetch("/api/notes");
+    if (!response.ok) throw new Error();
+
+    products = await response.json();
+    renderProducts();
+  } catch {
+    document.getElementById("catalogue").textContent =
+      "Unable to load notes.";
+  }
+}
+
+function renderProducts() {
+  const query = document.getElementById("search")
+    .value.toLowerCase();
+
+  const container = document.getElementById("catalogue");
+  container.replaceChildren();
+
+  const filtered = products.filter(p =>
+    (p.chapter + " " + p.subject)
+      .toLowerCase().includes(query)
+  );
+
+  if (!filtered.length) {
+    container.textContent = "No notes found.";
+    return;
+  }
+
+  filtered.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const title = document.createElement("h3");
+    title.textContent = p.chapter;
+
+    const subject = document.createElement("p");
+    subject.className = "muted";
+    subject.textContent = p.subject + " • Class 12 CBSE";
+
+    const price = document.createElement("p");
+    price.className = "price";
+    price.textContent = "₹" + p.price;
+
+    const preview = document.createElement("a");
+    preview.href = p.pdfUrl;
+    preview.target = "_blank";
+    preview.rel = "noopener";
+    preview.textContent = "Preview PDF";
+
+    const add = document.createElement("button");
+    add.textContent = "Add to Cart";
+    add.onclick = () => addToCart(p.id);
+
+    card.append(title, subject, price, preview,
+                document.createElement("br"), add);
+
+    container.appendChild(card);
+  });
+}
+
+function saveCart() {
+  localStorage.setItem("notesCart", JSON.stringify(cart));
+  renderCart();
+}
+
+function addToCart(id) {
+  const product = products.find(p => p.id === id);
+  if (!product) return;
+
+  if (cart.some(p => p.id === id)) {
+    alert("Already in your cart.");
+    return;
+  }
+
+  cart.push({
+    id: product.id,
+    chapter: product.chapter,
+    subject: product.subject,
+    price: Number(product.price)
+  });
+
+  saveCart();
+}
+
+function renderCart() {
+  const container = document.getElementById("cartItems");
+  container.replaceChildren();
+
+  cart.forEach((item,index) => {
+    const row = document.createElement("p");
+    row.textContent =
+      item.chapter + " — ₹" + item.price;
+
+    const remove = document.createElement("button");
+    remove.textContent = "Remove";
+    remove.onclick = () => {
+      cart.splice(index,1);
+      saveCart();
+    };
+
+    row.appendChild(remove);
+    container.appendChild(row);
+  });
+
+  const total = cart.reduce(
+    (sum,item) => sum + item.price,0
+  );
+
+  document.getElementById("total").textContent =
+    "Total: ₹" + total;
+}
+
+function clearCart() {
+  cart = [];
+  saveCart();
+  document.getElementById("checkoutMessage").textContent = "";
+}
+
+function checkout() {
+  const message = document.getElementById("checkoutMessage");
+
+  if (!cart.length) {
+    message.textContent = "Your cart is empty.";
+    return;
+  }
+
+  const total = cart.reduce(
+    (sum,item) => sum + item.price,0
+  );
+
+  message.textContent =
+    "Order summary: " + cart.length +
+    " item(s). Total ₹" + total +
+    ". This is a preview only; orders and payments are not yet enabled.";
+}
+
+document.getElementById("search")
+  .addEventListener("input",renderProducts);
+
+renderCart();
+loadProducts();
+</script>
+
+</body>
+</html>

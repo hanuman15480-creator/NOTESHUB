@@ -1,0 +1,23 @@
+[
+  {
+    "id": "bcdcc1eb-37fb-49e3-95e0-66658174cbd0",
+    "username": "teststudent",
+    "salt": "b3fba5b96535ee6eae4d59c1935c861b",
+    "passwordHash": "71339203d12e37c557aaf5058534da50864ada836184d0dd921978b0d1e9c7fe14617ddae4998fbc6122869f72e5cf12c5e310b1d2520edde555a44d2a0c5c43",
+    "createdAt": "2026-11-07T09:15:38.842Z"
+  },
+  {
+    "id": "0b119ea9-cf1f-48e0-bc2b-f8e9c4f4fcf8",
+    "username": "xyz",
+    "salt": "e4ba00c924bb6bbe83268b987afd8730",
+    "passwordHash": "80611ce004636ae760d69e6b93fd41647d8bdc75e31335e28835a0f1f3ca427ae819b80acd26dec6db4e28a3301c1e31bc33bce8bfef17023a9842066b4feb28",
+    "createdAt": "2026-11-07T09:17:55.539Z"
+  },
+  {
+    "id": "e158a114-ea65-4630-9494-271d121b3db7",
+    "username": "xyx",
+    "salt": "02f1270691883dcbb72fd014890bec1f",
+    "passwordHash": "8785d13175aa75bdf37b675ef1f460a8857691afe6f6f916817bd99961e89a7482dbdf81f62ba28ddff9d6d30583caf245b22959d6042bab53231d1d74daa716",
+    "createdAt": "2026-11-07T09:18:27.963Z"
+  }
+]

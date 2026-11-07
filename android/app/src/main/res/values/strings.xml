@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NotesHub</string>
+    <string name="title_activity_main">NotesHub</string>
+    <string name="package_name">com.noteshub.app</string>
+    <string name="custom_url_scheme">com.noteshub.app</string>
+</resources>

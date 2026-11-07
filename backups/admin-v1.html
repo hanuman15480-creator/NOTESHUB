@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NotesHub Admin</title>
+<style>
+body {
+  font-family: Arial;
+  background: #f1f5f9;
+  color: #172554;
+  padding: 20px;
+  margin: 0;
+}
+header, section {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+header { background: #172554; color: white; }
+input, select {
+  width: 100%;
+  padding: 13px;
+  margin: 10px 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+button {
+  padding: 12px 16px;
+  background: #2563eb;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  margin: 5px 0;
+}
+.delete { background: #dc2626; }
+#dashboard { display: none; }
+.product {
+  padding: 12px 0;
+  border-bottom: 1px solid #ddd;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>📚 NotesHub Admin</h1>
+<p>Manage your notes business</p>
+</header>
+
+<section id="login">
+<h2>Admin Login</h2>
+<input id="password" type="password"
+placeholder="Enter admin password">
+<button onclick="login()">Login</button>
+<p id="loginStatus"></p>
+</section>
+
+<div id="dashboard">
+
+<section>
+<h2>Add New Notes</h2>
+<form id="noteForm">
+
+<label>Subject</label>
+<select id="subject">
+<option>Physics</option>
+<option>Chemistry</option>
+<option>Maths</option>
+</select>
+
+<label>Chapter</label>
+<input id="chapter" required maxlength="120">
+
+<label>Price (₹)</label>
+<input id="price" type="number"
+min="0" max="100000" required>
+
+<label>PDF file</label>
+<input id="pdf" type="file"
+accept=".pdf,application/pdf" required>
+
+<button type="submit">Upload Notes</button>
+</form>
+<p id="status"></p>
+</section>
+
+<section>
+<h2>My Products</h2>
+<div id="products"></div>
+<button onclick="logout()">Logout</button>
+</section>
+
+</div>
+
+<script>
+async function login() {
+  const password = document.getElementById("password").value;
+  const status = document.getElementById("loginStatus");
+
+  try {
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({password})
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) throw new Error(result.error);
+
+    document.getElementById("login").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+
+    loadProducts();
+  } catch(error) {
+    status.textContent = error.message;
+  }
+}
+
+async function loadProducts() {
+  const container = document.getElementById("products");
+
+  const response = await fetch("/api/notes");
+  const notes = await response.json();
+
+  container.replaceChildren();
+
+  if (!notes.length) {
+    container.textContent = "No products yet.";
+    return;
+  }
+
+  notes.forEach(note => {
+    const item = document.createElement("div");
+    item.className = "product";
+
+    const title = document.createElement("h3");
+    title.textContent = note.chapter;
+
+    const info = document.createElement("p");
+    info.textContent = note.subject + " | ₹" + note.price;
+
+    const link = document.createElement("a");
+    link.href = note.pdfUrl;
+    link.textContent = "Open PDF";
+    link.target = "_blank";
+    link.rel = "noopener";
+
+    const remove = document.createElement("button");
+    remove.className = "delete";
+    remove.textContent = "Delete product";
+
+    remove.onclick = async () => {
+      if (!confirm("Delete this product permanently?")) return;
+
+      const result = await fetch("/api/notes/" + encodeURIComponent(note.id), {
+        method: "DELETE"
+      });
+
+      if (!result.ok) {
+        alert("Could not delete product.");
+        return;
+      }
+
+      loadProducts();
+    };
+
+    item.append(title, info, link, document.createElement("br"), remove);
+    container.appendChild(item);
+  });
+}
+
+document.getElementById("noteForm").onsubmit = async event => {
+  event.preventDefault();
+
+  const data = new FormData();
+  data.append("subject", document.getElementById("subject").value);
+  data.append("chapter", document.getElementById("chapter").value);
+  data.append("price", document.getElementById("price").value);
+  data.append("pdf", document.getElementById("pdf").files[0]);
+
+  const status = document.getElementById("status");
+  status.textContent = "Uploading...";
+
+  try {
+    const response = await fetch("/api/notes", {
+      method: "POST",
+      body: data
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+
+    status.textContent = "Upload successful!";
+    event.target.reset();
+    loadProducts();
+  } catch(error) {
+    status.textContent = error.message;
+  }
+};
+
+async function logout() {
+  await fetch("/api/logout", {method: "POST"});
+  location.reload();
+}
+</script>
+</body>
+</html>

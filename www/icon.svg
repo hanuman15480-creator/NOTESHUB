@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#172554"/>
+  <path d="M130 105h180l75 75v227H130z" fill="white"/>
+  <path d="M310 105v80h75" fill="#bfdbfe"/>
+  <path d="M175 245h165M175 295h165M175 345h115"
+        stroke="#172554" stroke-width="18" stroke-linecap="round"/>
+  <text x="256" y="435" font-size="42" font-weight="bold"
+        text-anchor="middle" fill="white">NH</text>
+</svg>

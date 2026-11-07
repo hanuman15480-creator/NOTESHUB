@@ -1,0 +1,19 @@
+{
+  "name": "NotesHub",
+  "short_name": "NotesHub",
+  "description": "Class 12 CBSE handwritten study notes",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#172554",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
